@@ -2,7 +2,7 @@
 
 ## What is this?
 
-  This is a demo of how you can use AspectJ to cleanly enhance a third-party library. You may not have the access to the source code, or you prefer not to modify the source code.
+  This is a demo of how you can use AspectJ to cleanly enhance a third-party library. You may want to do this when you do not have the access to the source code of the third-party library, or you prefer not to modify it.
 
 ## Why the enhancement?
 
