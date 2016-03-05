@@ -1,0 +1,80 @@
+group 'net.ripe.rpki'
+version "2.20"
+
+description 'RPKI validator CLI with rsync simulation'
+
+apply plugin: 'java'
+apply plugin: 'maven'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    ajVersion = "1.7.4"
+}
+
+configurations {
+    rpkiValidator
+    ajrt
+    mailApi
+    ajtools
+}
+
+dependencies {
+    rpkiValidator( "net.ripe.rpki:rpki-validator-cli:2.20:jar-with-dependencies" ) {
+        transitive = false
+    }
+    ajrt "org.aspectj:aspectjrt:${ajVersion}"
+    mailApi "javax.mail:javax.mail-api:1.5.5"
+    ajtools "org.aspectj:aspectjtools:${ajVersion}"
+
+    compile configurations.rpkiValidator
+    compile configurations.ajrt
+    compile configurations.mailApi
+}
+
+task weaveAspect << {
+    ant.taskdef(
+            resource: "org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties",
+            classpath: configurations.ajtools.asPath
+    )
+
+    ant.iajc(
+            source: "$sourceCompatibility",
+            target: "$targetCompatibility",
+            inpath: configurations.rpkiValidator.asPath,
+            classpath: configurations.compile.asPath,
+            destDir: "$buildDir/libs/ajc-result"
+    ) {
+        sourceroots {
+            sourceSets.main.java.srcDirs.each {
+                pathelement( location: it.absolutePath )
+            }
+        }
+    }
+}
+
+task fatJar( type: Jar ) {
+    classifier "jar-with-dependencies"
+    from {
+        fileTree( dir: "$buildDir/libs/ajc-result" )
+    }
+    from {
+        configurations.ajrt.collect { it.isDirectory() ? it : zipTree( it ) }
+    }
+    manifest {
+        attributes 'Main-Class': 'net.ripe.rpki.validator.cli.Main'
+    }
+    exclude 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.SF'
+}
+
+fatJar.dependsOn weaveAspect
+build.dependsOn fatJar
+
+artifacts {
+    archives fatJar
+}
